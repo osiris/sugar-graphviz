@@ -434,17 +434,31 @@ dot -Tpng $DOT -o $PNG
 echo "Write "$PNG
 identify $PNG
 
-## All Tables
-#SQL="show tables"
-#TABLES=$(echo $SQL | $MYSQL)
+function mysql2rst()
+{
+    if [ -f $1 ]
+    then
+        MYSQL_TABLE=$1
+        RST_TABLE=$1.tmp
 
-cat $RST_TMP
-##d -1)
-#h=$(cat $t | head -2 | tail -1)
-#cat $t | tail -n +4 | head -n -1 >reStructuredText
+        TBL_LINE=$(cat $MYSQL_TABLE | head -1)
+        TBL_HEADER=$(cat $MYSQL_TABLE | head -2 | tail -1)
+        cat $MYSQL_TABLE | tail -n +4 | head -n -1 >$RST_TABLE
+
+        echo "$TBL_LINE" >$MYSQL_TABLE
+        echo "$TBL_HEADER" >>$MYSQL_TABLE
+        echo "$TBL_LINE" | tr "-" "=" >>$MYSQL_TABLE
+
+        cat $RST_TABLE | while read i
+        do
+            echo "$i" >>$MYSQL_TABLE
+            echo "$TBL_LINE" >>$MYSQL_TABLE
+        done
+    fi
+}
+
 for TABLE in $(cat $RST_TMP | sort -u)
 do
-        echo $TABLE
         echo $'\n'>>$RST
         echo $TABLE>>$RST
         RST_TITLE=$(echo $TABLE | tr [:print:] "~")
@@ -453,28 +467,7 @@ do
         SQL="desc $TABLE;"
         #echo $SQL | $MYSQL -t | tr "+" "\ " | tr "\|" "\ " | tr "-" "=" >$TMP_PREFIX$TABLE
         echo $SQL | $MYSQL -t >$TMP_PREFIX$TABLE
-
-        cat $TMP_PREFIX$TABLE
-
-        TBL_LINE=$(cat $TMP_PREFIX$TABLE | head -1)
-        TBL_HEADER=$(cat $TMP_PREFIX$TABLE | head -2 | tail -1)
-        cat $TMP_PREFIX$TABLE | tail -n +4 | head -n -1 >$RST_TBL
-
-        cat $RST_TBL
-
-        echo "$TBL_LINE" >$TMP_PREFIX$TABLE
-        echo "$TBL_HEADER" >>$TMP_PREFIX$TABLE
-        echo "$TBL_LINE" | tr "-" "=" >>$TMP_PREFIX$TABLE
-
-        cat $RST_TBL | while read i
-        do
-            echo "$i" >>$TMP_PREFIX$TABLE
-            echo "$TBL_LINE" >>$TMP_PREFIX$TABLE
-
-            echo "$i"
-            echo "$TBL_LINE"
-        done
-
+        mysql2rst $TMP_PREFIX$TABLE 
         cat $TMP_PREFIX$TABLE>>$RST
 done
 
@@ -503,6 +496,7 @@ done
     echo $SQL>>$LOG
     #echo $SQL | $MYSQL -t | tr "+" "\ " | tr "\|" "\ " | tr "-" "=" >$TMP_PREFIX'relationships-'$MODULE_NAME
     echo $SQL | $MYSQL -t >$TMP_PREFIX'relationships-'$MODULE_NAME
+    mysql2rst $TMP_PREFIX'relationships-'$MODULE_NAME
     cat $TMP_PREFIX'relationships-'$MODULE_NAME>>$RST
     echo $'\n'>>$RST
 
@@ -517,6 +511,7 @@ done
     echo $SQL>>$LOG
     #echo $SQL | $MYSQL -t | tr "+" "\ " | tr "\|" "\ " | tr "-" "=" >$TMP_PREFIX'relationships-'$MODULE_NAME
     echo $SQL | $MYSQL -t >$TMP_PREFIX'relationships-'$MODULE_NAME
+    mysql2rst $TMP_PREFIX'relationships-'$MODULE_NAME
     cat $TMP_PREFIX'relationships-'$MODULE_NAME>>$RST
     echo $'\n'>>$RST
 
@@ -531,6 +526,7 @@ done
     echo 'join tables query: '$SQL>>$LOG
     #echo $SQL | $MYSQL -t | tr "+" "\ " | tr "\|" "\ " | tr "-" "=" >$TMP_PREFIX'relationships-'$MODULE_NAME
     echo $SQL | $MYSQL -t >$TMP_PREFIX'relationships-'$MODULE_NAME
+    mysql2rst $TMP_PREFIX'relationships-'$MODULE_NAME
     cat $TMP_PREFIX'relationships-'$MODULE_NAME>>$RST
     echo $'\n'>>$RST
     
@@ -555,11 +551,7 @@ done
     PNG_X=$(identify $PNG | egrep -o "[0-9]*x" | sort -u | tr -d x)
     PNG_Y=$(identify $PNG | egrep -o "x[0-9]*" | sort -u | tr -d x)
 
-    PNG_SCALE=$[ $PNG_X / 200 ]
-    PNG_WIDTH=$[ $PNG_X / $PNG_SCALE ]
-    PNG_HEIGHT=$[ $PNG_Y / $PNG_SCALE ]
-    echo "   :width: "$PNG_WIDTH>>$RST
-    echo "   :height: "$PNG_HEIGHT>>$RST
+    echo "   :width: 16cm ">>$RST
 
     echo $'\n'>>$RST
 
