@@ -435,12 +435,16 @@ echo "Write "$PNG
 identify $PNG
 
 ## All Tables
-SQL="show tables"
-TABLES=$(echo $SQL | $MYSQL)
+#SQL="show tables"
+#TABLES=$(echo $SQL | $MYSQL)
 
-## reStructuredText
+cat $RST_TMP
+##d -1)
+#h=$(cat $t | head -2 | tail -1)
+#cat $t | tail -n +4 | head -n -1 >reStructuredText
 for TABLE in $(cat $RST_TMP | sort -u)
 do
+        echo $TABLE
         echo $'\n'>>$RST
         echo $TABLE>>$RST
         RST_TITLE=$(echo $TABLE | tr [:print:] "~")
@@ -449,6 +453,28 @@ do
         SQL="desc $TABLE;"
         #echo $SQL | $MYSQL -t | tr "+" "\ " | tr "\|" "\ " | tr "-" "=" >$TMP_PREFIX$TABLE
         echo $SQL | $MYSQL -t >$TMP_PREFIX$TABLE
+
+        cat $TMP_PREFIX$TABLE
+
+        TBL_LINE=$(cat $TMP_PREFIX$TABLE | head -1)
+        TBL_HEADER=$(cat $TMP_PREFIX$TABLE | head -2 | tail -1)
+        cat $TMP_PREFIX$TABLE | tail -n +4 | head -n -1 >$RST_TBL
+
+        cat $RST_TBL
+
+        echo "$TBL_LINE" >$TMP_PREFIX$TABLE
+        echo "$TBL_HEADER" >>$TMP_PREFIX$TABLE
+        echo "$TBL_LINE" | tr "-" "=" >>$TMP_PREFIX$TABLE
+
+        cat $RST_TBL | while read i
+        do
+            echo "$i" >>$TMP_PREFIX$TABLE
+            echo "$TBL_LINE" >>$TMP_PREFIX$TABLE
+
+            echo "$i"
+            echo "$TBL_LINE"
+        done
+
         cat $TMP_PREFIX$TABLE>>$RST
 done
 
