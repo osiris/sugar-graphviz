@@ -1,12 +1,72 @@
 #!/bin/bash
 
-DB_HOST='localhost'
-DB_NAME='sugar'
+CONFIG='config.php'
 DB_PASS='sugar'
-DB_PORT='3306'
 DB_USER='sugar'
+DB_NAME='sugar'
+DB_PORT='3306'
+DB_HOST='localhost'
+IGNORE_TABLES='ignore-tables'
 
-SQL='mysql --default-character-set=utf8 -u '$DB_USER' -p'$DB_PASS' --database '$DB_NAME' -h '$DB_HOST' --port '$DB_PORT
+function usage()
+{
+    echo
+    echo "Use:"
+    echo "# $0 [options]"
+    echo " -u, --user     Specify user of database."
+    echo " -p, --password Specify password of database."
+    echo " -B, --database Specify database name."
+    echo " -P, --port     Specify port of database."
+    echo " -h, --host     Specify host of database."
+    echo " -c, --config   Load configuration from config.php"
+    echo " -i, --ignore   File with tablenames to ignore"
+    echo " -?, --help"
+    echo
+    exit 1
+}
+
+while [ ! -z "$1" ]
+do
+  case "$1" in
+    -u|--user)
+      DB_USER=$2
+      shift 2
+      ;;  
+    -p|--password)
+      DB_PASS=$2
+      shift 2
+      ;;  
+    -P|--port)
+      DB_PASS=$2
+      shift 2
+      ;;  
+    -B|--database)
+      DB_NAME=$2
+      shift 2
+      ;;  
+    -h|--host)
+      DB_HOST=$2
+      shift 2
+      ;;  
+    -c|--config)
+      SUGAR_CONFIG=true
+      DB_USER=$(cat $CONFIG | grep db_user_name | tr -d \ ,\'\> | awk -F= '{print $2}')
+      DB_PASS=$(cat $CONFIG | grep db_password  | tr -d \ ,\'\> | awk -F= '{print $2}')
+      DB_NAME=$(cat $CONFIG | grep db_name      | tr -d \ ,\'\> | awk -F= '{print $2}')
+      DB_HOST=$(cat $CONFIG | grep db_host_name | tr -d \ ,\'\> | awk -F= '{print $2}')
+      shift 1
+      ;;
+    -i|--ignore)
+      IGNORE_TABLES=$2
+      shift 2
+      ;;
+    -?|--help)
+      usage
+      ;;  
+  esac
+done
+
+SQL='mysql --default-character-set=utf8 -u'$DB_USER' -p'$DB_PASS' -B '$DB_NAME' -h '$DB_HOST' --port '$DB_PORT 
 
 cat graphviz-colors.sql | $SQL
 
@@ -18,7 +78,10 @@ SUGAR_TABLES='sugar_tables.tmp'
 SUGAR_JOIN_TABLES='sugar_join_tables.tmp'
 SUGAR_NODES='sugar_nodes.tmp'
 
-echo "show tables" | $SQL -N | sort -u >$MYSQL_TABLES
+touch $IGNORE_TABLES
+TOTAL_IGNORE=$(wc -l $IGNORE_TABLES)
+
+echo "show tables" | $SQL -N | grep -v -w -f $IGNORE_TABLES | sort -u >$MYSQL_TABLES
 wc -l $MYSQL_TABLES
 
 echo "
@@ -36,25 +99,26 @@ UNION ALL
   GROUP BY  rhs_table
 )
 ORDER BY tablename
-" | $SQL -N | egrep -v "^users$" | sort -u >$SUGAR_TABLES
+" | $SQL -N | grep -v -w -f $IGNORE_TABLES | sort -u >$SUGAR_TABLES
+
+TOTAL_TABLES=$(wc -l $SUGAR_TABLES)
+TOTAL_JOIN_TABLES=$(wc -l $SUGAR_JOIN_TABLES)
+cat $SUGAR_TABLES $SUGAR_JOIN_TABLES | sort -u >$SUGAR_NODES
+TOTAL_NODES=$(wc -l $SUGAR_NODES)
 
 echo "digraph sugar {" >$DOT
 
-echo "graph [ratio=fill, overlap=false, bgcolor=white, fontname=inconsolata, fontsize=12, labelloc=b, labeljust=l, label=\"SugarGCA | http://www.gcoop.coop\"]">>$DOT
+echo "graph [ratio=fill, overlap=false, bgcolor=white, fontname=inconsolata, fontsize=12, labelloc=b, labeljust=l, label=\"db: $DB_NAME@$DB_HOST\ntotal tables: $TOTAL_TABLES\ntotal join tables: $TOTAL_JOIN_TABLES\ntotal ignore: $TOTAL_IGNORE\ntotal nodes: $TOTAL_NODES \"]" >>$DOT
 echo "node [penwidth=2,color=gray]" >>$DOT
 echo "edge [penwidth=2,color=gray]" >>$DOT
+echo "rankdir=TB" >>$DOT
 
 echo "
 SELECT  DISTINCT
         join_table
 FROM    relationships
 WHERE   join_table != 'users'
-" | $SQL -N | egrep -v "^users$" | sort -u >$SUGAR_JOIN_TABLES
-
-wc -l $SUGAR_TABLES
-wc -l $SUGAR_JOIN_TABLES
-cat $SUGAR_TABLES $SUGAR_JOIN_TABLES | sort -u >$SUGAR_NODES
-wc -l $SUGAR_NODES
+" | $SQL -N | grep -v -w -f $IGNORE_TABLES | sort -u >$SUGAR_JOIN_TABLES
 
 echo "TRUNCATE TABLE graphviz_tables;" | $SQL
 
@@ -73,22 +137,25 @@ do
 done
 
 N='\n'
+
 cat $SUGAR_NODES | while read NODO
 do
-    TABLE_EXISTS=true
+    TABLE_EXISTS=false
     echo "DESC $NODO" | $SQL -N | awk '{print $1}'  >$$NODO 2>/dev/null
     LINES=$(wc -l $$NODO | awk '{print $1}')
-    if [ $LINES -eq 0 ]
+
+    if [ $LINES -ne 0 ]
     then
-        TABLE_EXISTS=false
-        TABLA=$(echo $NODO | tr -d "_")
-        echo "DESC $TABLA" | $SQL -N | awk '{print $1}'  >$$NODO 2>/dev/null
+        TABLE_EXISTS=true
+        echo "DESC $NODO" | $SQL -N | awk '{print $1,$3}' | grep NO | grep -v $NODO | awk '{print $1}'  >$$NODO 2>/dev/null
         LINES=$(wc -l $$NODO | awk '{print $1}')
+        
         if [ $LINES -eq 0 ]
         then
           TABLE_EXISTS=false
         fi
     fi
+
     if [ $TABLE_EXISTS == "true" ]
     then
       COLOR=$(echo "
@@ -97,14 +164,14 @@ do
       WHERE     tablename='$NODO';
       " | $SQL -N)
 
-      echo -n $NODO" [shape=record,color=\"$COLOR\",label=\""$NODO$N >>$DOT
+      echo -n $NODO" [shape=record,color=\"$COLOR\",label=\"{$NODO|" >>$DOT
 
       cat $$NODO | while read CAMPO
       do
        echo -n $CAMPO$N >>$DOT
       done
 
-      echo -n "\"];" >>$DOT
+      echo -n "}\"];" >>$DOT
       echo "">>$DOT
     else
       echo "TABLE DON'T EXISTS "$NODO
@@ -132,7 +199,7 @@ do
     FROM   relationships
     WHERE  relationship_type='many-to-many'
   );
-  " | $SQL -N)
+  " | $SQL -N | grep -v -w -f $IGNORE_TABLES )
 
   for NODO2 in $TABLAS
   do
@@ -164,7 +231,7 @@ do
     FROM   relationships
     WHERE  relationship_type='many-to-many'
   );
-  " | $SQL -N)
+  " | $SQL -N | grep -v -w -f $IGNORE_TABLES )
 
  for NODO2 in $TABLAS
  do
@@ -172,7 +239,7 @@ do
    SELECT colorname
    FROM   graphviz_tables
    WHERE  tablename='$NODO1';
-   " | $SQL -N)
+   " | $SQL -N | grep -v -w -f $IGNORE_TABLES )
    echo $NODO1" -> "$NODO2" [color=\"$COLOR\"];" >>$DOT
  done
 done
@@ -185,7 +252,7 @@ do
   WHERE  lhs_table = '$NODO1'
   AND    relationship_type='many-to-many'
   AND    join_table IS NULL;
-  " | $SQL -N)
+  " | $SQL -N | grep -v -w -f $IGNORE_TABLES )
 
  for NODO2 in $TABLAS
  do
@@ -193,7 +260,7 @@ do
    SELECT colorname
    FROM   graphviz_tables
    WHERE  tablename='$NODO1';
-   " | $SQL -N)
+   " | $SQL -N | grep -v -w -f $IGNORE_TABLES )
    echo $NODO1" -> "$NODO2" [color=\"$COLOR\"];" >>$DOT
  done
 done
@@ -221,7 +288,7 @@ do
     AND     relationship_type='many-to-many'
     AND     join_table IS NOT NULL
   );
-  " | $SQL -N
+  " | $SQL -N | grep -v -w -f $IGNORE_TABLES 
 done | while read NODOS
 do
     NODO1=$(echo $NODOS | awk '{print $1}')
