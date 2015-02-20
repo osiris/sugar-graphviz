@@ -11,8 +11,8 @@ You need graphviz.
 ## Example
 
 ### Calls
-
-![alt text](https://raw.github.com/gcoop-libre/sugar-graphtiz/master/examples/sugar52/sugar52-relationships-calls.png "SugarCRM 5.2 Calls Relationships")
+ 
+![SugarCRM 5.2 Calls Relationships](https://raw.githubusercontent.com/gcoop-libre/sugar-graphviz/master/examples/sugar52/sugar52-relationships-calls.png "SugarCRM 5.2 Calls Relationships")
 
 ## Usage
 
