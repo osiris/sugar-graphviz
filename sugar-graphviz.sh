@@ -1,11 +1,21 @@
 #!/bin/bash
 
-# :Url:   http://www.gcoop.com.ar/sugar-graphviz
-# :Author: Osiris Alejandro Gómez
-# :Address: sugar-graphviz@gcoop.com.ar
-# :Copyright: 2008 - Gcoop | Cooperativa de Trabajo Gcoop Ltda.
-# :License: GNU General Public License GPLv3
-# :Version: 1.0
+# This script comes with ABSOLUTELY NO WARRANTY, use at own risk
+# Copyright (C) 2008-2024 Osiris Alejandro Gomez <osiux@osiux.com>
+# Copyright (C) 2008-2024 Osiris Alejandro Gomez <osiris@gcoop.coop>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 CONFIG='config.php'
 
@@ -52,15 +62,15 @@ while [ ! -z "$1" ];do
         -u|--user)
             DB_USER=$2
             shift 2
-        ;;  
+        ;;
         -p|--password)
             DB_PASS=$2
             shift 2
-        ;;  
+        ;;
         -B|--database)
             DB_NAME=$2
             shift 2
-        ;;  
+        ;;
         -h|--host)
             DB_HOST=$2
             shift 2
@@ -365,7 +375,7 @@ echo $'\n'>>$DOT
 echo "## Left Join Relationships">>$DOT
 # Left Join Tables Relationships
     SQL="select distinct join_table,lhs_table from relationships where join_table is not null"
-    if [ "$MODULE_NAME" != "all" ]    
+    if [ "$MODULE_NAME" != "all" ]
     then
         AND=" and "$(echo \($WHERE\) | sed s/where//g)
     else
@@ -393,7 +403,7 @@ echo $'\n'>>$DOT
 echo "## Right Join Relationships">>$DOT
 # Right Join Tables Relationships
     SQL="select distinct join_table,rhs_table from relationships where join_table is not null"
-    if [ "$MODULE_NAME" != "all" ]    
+    if [ "$MODULE_NAME" != "all" ]
     then
         AND=" and "$(echo \($WHERE\) | sed s/where//g)
     else
@@ -467,7 +477,7 @@ do
         SQL="desc $TABLE;"
         #echo $SQL | $MYSQL -t | tr "+" "\ " | tr "\|" "\ " | tr "-" "=" >$TMP_PREFIX$TABLE
         echo $SQL | $MYSQL -t >$TMP_PREFIX$TABLE
-        mysql2rst $TMP_PREFIX$TABLE 
+        mysql2rst $TMP_PREFIX$TABLE
         cat $TMP_PREFIX$TABLE>>$RST
 done
 
@@ -529,7 +539,7 @@ done
     mysql2rst $TMP_PREFIX'relationships-'$MODULE_NAME
     cat $TMP_PREFIX'relationships-'$MODULE_NAME>>$RST
     echo $'\n'>>$RST
-    
+
 
     echo $'\n'>>$RST
     RST_ERD='Entity-Relationship Diagram'
@@ -576,4 +586,3 @@ if [ "$SAVE_DOT" = "false" ]
 then
     rm -f $DOT
 fi
-
