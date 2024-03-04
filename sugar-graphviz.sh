@@ -29,6 +29,7 @@ ROTATE=false
 GRAPHVIZ_TABLES=false
 TMP_PREFIX='/tmp/sugar-graphviz--'
 DB_PORT=3306
+EXCLUDE=EXCLUDE_REGEX
 BG_COLOR=black
 FONT_COLOR=yellow
 
@@ -131,6 +132,10 @@ while [ ! -z "$1" ];do
             FONT_COLOR=$2
             shift 2
         ;;
+        -x|--exclude)
+            EXCLUDE=$2
+            shift 2
+        ;;
         -?|--help)
             usage
         ;;
@@ -217,7 +222,7 @@ echo "## Left Tables">>$DOT
 SQL="select distinct lhs_table as table_name from relationships"
 SQL=$SQL" "$WHERE" order by lhs_table;"
 echo $SQL>>$LOG
-LEFT_TABLES=$(echo $SQL | $MYSQL | grep -v table_name)
+LEFT_TABLES=$(echo $SQL | $MYSQL | grep -v table_name | grep -vE "$EXCLUDE")
 echo $LEFT_TABLES>>$LOG
 TOTAL_LEFT_TABLES=$(echo $LEFT_TABLES | wc -w)
 echo "Left Tables: "$TOTAL_LEFT_TABLES
@@ -239,7 +244,7 @@ do
     echo $TABLE>>$RST_TMP
     SQL="select distinct(lhs_key) as key_name from relationships where lhs_table='$TABLE' order by lhs_key;"
     echo $SQL>>$LOG
-    KEY=$(echo $SQL | $MYSQL | grep -v key_name)
+    KEY=$(echo $SQL | $MYSQL | grep -v key_name | grep -vE "$EXCLUDE")
     KEY=$(echo $KEY | sed s/\ /\|/g)
     KEY=$(echo $KEY | awk -F\| '{print "<"$1">"$1"|<"$2">"$2"|<"$3">"$3"|<"$4">"$4"|<"$5">"$5"|<"$6">"$6"|<"$7">"$7"|<"$8">"$8"|<"$9">"$9"|<"$10">"$10}' | sed s/\|\<\>//g)
     SQL="select colorname from graphviz_tables where tablename='$TABLE';"
@@ -256,7 +261,7 @@ echo "## Right Tables">>$DOT
 SQL="select distinct rhs_table as table_name from relationships "
 SQL=$SQL" "$WHERE" order by rhs_table;"
 echo $SQL>>$LOG
-RIGHT_TABLES=$(echo $SQL | $MYSQL | grep -v table_name)
+RIGHT_TABLES=$(echo $SQL | $MYSQL | grep -v table_name | grep -vE "$EXCLUDE")
 TOTAL_RIGHT_TABLES=$(echo $RIGHT_TABLES | wc -w)
 echo "Right Tables: "$TOTAL_RIGHT_TABLES
 
@@ -265,7 +270,7 @@ do
     echo $TABLE>>$RST_TMP
 
     SQL="select distinct(rhs_key) as key_name from relationships where rhs_table='$TABLE' order by rhs_key;"
-    KEY=$(echo $SQL | $MYSQL | grep -v key_name)
+    KEY=$(echo $SQL | $MYSQL | grep -v key_name | grep -vE "$EXCLUDE" )
     KEY=$(echo $KEY | sed s/\ /\|/g)
     KEY=$(echo $KEY | awk -F\| '{print "<"$1">"$1"|<"$2">"$2"|<"$3">"$3"|<"$4">"$4"|<"$5">"$5"|<"$6">"$6"|<"$7">"$7"|<"$8">"$8"|<"$9">"$9"|<"$10">"$10}' | sed s/\|\<\>//g)
     SQL="select colorname from graphviz_tables where tablename='$TABLE';"
@@ -288,7 +293,7 @@ else
 fi
 SQL=$SQL$AND" order by join_table;"
 echo $SQL>>$LOG
-JOIN_TABLES=$(echo $SQL | $MYSQL | grep -v table_name)
+JOIN_TABLES=$(echo $SQL | $MYSQL | grep -v table_name | grep -vE "$EXCLUDE")
 TOTAL_JOIN_TABLES=$(echo $JOIN_TABLES | wc -w)
 echo "Join Tables: "$TOTAL_JOIN_TABLES
 
@@ -298,7 +303,7 @@ do
 
     SQL="(select distinct(join_key_lhs) as key_name from relationships where join_table='$TABLE') union (select distinct(join_key_rhs) as key_name from relationships where join_table='$TABLE') order by key_name;"
     echo $SQL>>$LOG
-    KEY=$(echo $SQL | $MYSQL | grep -v key_name)
+    KEY=$(echo $SQL | $MYSQL | grep -v key_name | grep -vE "$EXCLUDE")
     KEY=$(echo $KEY | sed s/\ /\|/g)
     KEY=$(echo $KEY | awk -F\| '{print "<"$1">"$1"|<"$2">"$2"|<"$3">"$3"|<"$4">"$4"|<"$5">"$5"|<"$6">"$6"|<"$7">"$7"|<"$8">"$8"|<"$9">"$9"|<"$10">"$10}' | sed s/\|\<\>//g)
     SQL="select colorname from graphviz_tables where tablename='$TABLE';"
@@ -310,7 +315,7 @@ done
 
 ## Custom Tables
 SQL="show tables"
-CUSTOM_TABLES=$(echo $SQL | $MYSQL | grep "_cstm")
+CUSTOM_TABLES=$(echo $SQL | $MYSQL | grep "_cstm" | grep -vE "$EXCLUDE")
 echo 'Custom tables query: '$SQL>>$LOG
 echo 'Custom tables result: '$CUSTOM_TABLES>>$LOG
 
@@ -348,7 +353,7 @@ for TABLE_CSTM in $UNIQUE_CUSTOM_TABLES
 do
     SQL="select colorname from graphviz_tables where tablename='$TABLE';"
     echo $SQL>>$LOG
-    COLOR=$(echo $SQL | $MYSQL | grep -v colorname)
+    COLOR=$(echo $SQL | $MYSQL | grep -v colorname | grep -vE "$EXCLUDE")
     TABLE=$(echo $TABLE_CSTM | sed s/_cstm//g)
     echo $TABLE_CSTM>>$RST_TMP
     echo $TABLE_CSTM" [color=$COLOR,label=\"{$TABLE_CSTM|id_c}\"];">>$DOT
@@ -368,7 +373,7 @@ SQL="select distinct lhs_table,rhs_table from relationships"
 ##SQL="select distinct lhs_table,lhs_key,rhs_table,rhs_key from relationships"
 SQL=$SQL" "$WHERE" order by lhs_table,rhs_table;"
 echo $SQL>>$LOG
-RELATIONSHIPS=$(echo $SQL | $MYSQL | grep -v lhs_table | sed s/\\t/\|/g)
+RELATIONSHIPS=$(echo $SQL | $MYSQL | grep -v lhs_table | grep -vE "$EXCLUDE" | sed s/\\t/\|/g)
 ##echo $RELATIONSHIPS
 TOTAL_SIMPLE_RELATIONSHIPS=$(echo $RELATIONSHIPS | wc -w)
 echo "Simple Relationhips: "$TOTAL_SIMPLE_RELATIONSHIPS
@@ -398,7 +403,7 @@ echo "## Left Join Relationships">>$DOT
     fi
     SQL=$SQL$AND" order by lhs_table;"
     echo $SQL>>$LOG
-    LEFT_JOIN_RELATIONSHIPS=$(echo $SQL | $MYSQL | grep -v lhs_table | sed s/\\t/\|/g)    
+    LEFT_JOIN_RELATIONSHIPS=$(echo $SQL | $MYSQL | grep -v lhs_table | grep -vE "$EXCLUDE" | sed s/\\t/\|/g)
     TOTAL_LEFT_JOIN_RELATIONSHIPS=$(echo $LEFT_JOIN_RELATIONSHIPS | wc -w)
     echo "Left Join Relationhips: "$TOTAL_LEFT_JOIN_RELATIONSHIPS
 
