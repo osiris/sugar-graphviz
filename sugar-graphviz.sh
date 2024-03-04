@@ -29,6 +29,8 @@ ROTATE=false
 GRAPHVIZ_TABLES=false
 TMP_PREFIX='/tmp/sugar-graphviz--'
 DB_PORT=3306
+BG_COLOR=black
+FONT_COLOR=yellow
 
 function usage()
 {
@@ -121,6 +123,14 @@ while [ ! -z "$1" ];do
             DB_PORT=$(cat $CONFIG | grep db_port      | tr -d \ ,\'\> | awk -F= '{print $2}')
             shift 1
         ;;
+        -C|--bg-color)
+            BG_COLOR=$2
+            shift 2
+        ;;
+        -F|--font-color)
+            FONT_COLOR=$2
+            shift 2
+        ;;
         -?|--help)
             usage
         ;;
@@ -181,10 +191,9 @@ rm -f $PNG
 
 ## Header
 echo "digraph Relationships {">>$DOT
-echo "node [shape=record,fontname=monospace,fontsize=8,color=gray];">>$DOT
+echo "node [shape=record,fontcolor=\"$FONT_COLOR\",fontname=monospace,fontsize=8,color=gray];">>$DOT
 echo 'ranksep=".3;"'>>$DOT
 echo 'orientarion="portrait"'>>$DOT
-#echo 'graph [fontname=monospace,fontsize=10,labelloc=t,labeljust=l,label="'$MODULE_NAME' relationships\n'$DB_NAME'@'$DB_HOST'"]'>>$DOT
 echo 'rankdir=TB'>>$DOT
 echo $'\n'>>$DOT
 
@@ -435,7 +444,7 @@ echo "## Right Join Relationships">>$DOT
 TOTAL_RELATIONSHIPS=$[ $TOTAL_SIMPLE_RELATIONSHIPS + $TOTAL_LEFT_JOIN_RELATIONSHIPS + $TOTAL_RIGHT_JOIN_RELATIONSHIPS ]
 echo "Total Relationships: "$TOTAL_RELATIONSHIPS
 
-echo 'graph [fontname=monospace,fontsize=12,labelloc=b,labeljust=l,label="'$MODULE_NAME' relationships '$DB_NAME'@'$DB_HOST' '$TOTAL_TABLES' tables '$TOTAL_RELATIONSHIPS' relationships"]'>>$DOT
+echo 'graph [bgcolor="'$BG_COLOR'",fontcolor="'$FONT_COLOR'",fontname=monospace,fontsize=12,labelloc=b,labeljust=l,label="'$MODULE_NAME' relationships '$DB_NAME'@'$DB_HOST' '$TOTAL_TABLES' tables '$TOTAL_RELATIONSHIPS' relationships"];'>>$DOT
 ## Footer
 echo "}">>$DOT
 
