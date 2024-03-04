@@ -1,0 +1,13 @@
+# _SugarGraphviz_
+
+Draw _ERD_ (_Entity Relationship Diagram_) of _SugarCRM_ Community
+Edition or [_SuiteCRM_](https://suitecrm.com/) modules including custom
+tables.
+
+Originally the `sugar-graphviz` _script_ was tested with versions
+`v4.5`, `v5.0`, `v5.1`, `v5.5` and `v6.0` of _SugarCRM_ Community
+Edition, the first public versión was released on `2009-05-05` in
+[SugarForge](https://web.archive.org/web/20090514034324/http://www.sugarforge.org/projects/sugar-graphviz/)
+
+The graph is auto-generated based on the records in the database's
+`relationships` table.

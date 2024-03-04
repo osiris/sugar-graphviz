@@ -1,11 +1,21 @@
 #!/bin/bash
 
-# :Url:   http://www.gcoop.com.ar/sugar-graphviz
-# :Author: Osiris Alejandro Gómez
-# :Address: sugar-graphviz@gcoop.com.ar
-# :Copyright: 2008 - Gcoop | Cooperativa de Trabajo Gcoop Ltda.
-# :License: GNU General Public License GPLv3
-# :Version: 1.0
+# This script comes with ABSOLUTELY NO WARRANTY, use at own risk
+# Copyright (C) 2008-2024 Osiris Alejandro Gomez <osiux@osiux.com>
+# Copyright (C) 2008-2024 Osiris Alejandro Gomez <osiris@gcoop.coop>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 CONFIG='config.php'
 
@@ -18,26 +28,38 @@ SAVE_DOT=false
 ROTATE=false
 GRAPHVIZ_TABLES=false
 TMP_PREFIX='/tmp/sugar-graphviz--'
+DB_PORT=3306
+EXCLUDE=EXCLUDE_REGEX
+BG_COLOR=black
+FONT_COLOR=yellow
+BIN="$(basename "$0" .sh)"
+
+# Overwrite default values
+[[ -e ".$BIN" ]] && source ".$BIN"
 
 function usage()
 {
     echo
     echo "Use:"
     echo "# $0 [options] -c -m module_name"
-    echo " -u, --user     Specify user of database."
-    echo " -p, --password Specify password of database."
-    echo " -B, --database Specify database name."
-    echo " -h, --host     Specify host of database."
-    echo " -c, --config   Load configuration from config.php"
-    echo " -m, --module   Specify a name of module to draw."
-    echo " -d, --dot      Save dot file."
-    echo " -f, --pdf      Generate pdf with table structure and relationships."
-    echo " -g, --graphviz Create graphviz tables."
-    echo " -j, --jpg      Save graph in jpeg format (default png)."
-    echo " -t, --htm      Generate html with table structure and relationships."
-    echo " -o, --rotate   Rotate image in document pdf/html."
-    echo " -r, --rst      Generate rst with table structure and relationships."
-    echo " -?, --help     This Help."
+    echo " -u, --user       Specify user of database."
+    echo " -p, --password   Specify password of database."
+    echo " -B, --database   Specify database name."
+    echo " -h, --host       Specify host of database."
+    echo " -P, --port       Specify port of database."
+    echo " -c, --config     Load configuration from config.php"
+    echo " -C, --bg-color   Define the background color"
+    echo " -F, --font-color Define the foreground color for nodes"
+    echo " -m, --module     Specify a name of module to draw."
+    echo " -d, --dot        Save dot file."
+    echo " -f, --pdf        Generate pdf with table structure and relationships."
+    echo " -g, --graphviz   Create graphviz tables."
+    echo " -j, --jpg        Save graph in jpeg format (default png)."
+    echo " -t, --htm        Generate html with table structure and relationships."
+    echo " -o, --rotate     Rotate image in document pdf/html."
+    echo " -r, --rst        Generate rst with table structure and relationships."
+    echo " -x, --exclude    Tables or Keys to exclude using Regex."
+    echo " -?, --help       This Help."
     echo
     exit 1
 }
@@ -52,17 +74,21 @@ while [ ! -z "$1" ];do
         -u|--user)
             DB_USER=$2
             shift 2
-        ;;  
+        ;;
         -p|--password)
             DB_PASS=$2
             shift 2
-        ;;  
+        ;;
         -B|--database)
             DB_NAME=$2
             shift 2
-        ;;  
+        ;;
         -h|--host)
             DB_HOST=$2
+            shift 2
+        ;;
+        -P|--port)
+            DB_PORT=$2
             shift 2
         ;;
         -m|--module)
@@ -103,7 +129,20 @@ while [ ! -z "$1" ];do
             DB_PASS=$(cat $CONFIG | grep db_password  | tr -d \ ,\'\> | awk -F= '{print $2}')
             DB_NAME=$(cat $CONFIG | grep db_name      | tr -d \ ,\'\> | awk -F= '{print $2}')
             DB_HOST=$(cat $CONFIG | grep db_host_name | tr -d \ ,\'\> | awk -F= '{print $2}')
+            DB_PORT=$(cat $CONFIG | grep db_port      | tr -d \ ,\'\> | awk -F= '{print $2}')
             shift 1
+        ;;
+        -C|--bg-color)
+            BG_COLOR=$2
+            shift 2
+        ;;
+        -F|--font-color)
+            FONT_COLOR=$2
+            shift 2
+        ;;
+        -x|--exclude)
+            EXCLUDE=$2
+            shift 2
         ;;
         -?|--help)
             usage
@@ -114,7 +153,7 @@ while [ ! -z "$1" ];do
     esac
 done
 
-MYSQL=$'mysql -u '$DB_USER$' -p'$DB_PASS$' -B '$DB_NAME$' -h '$DB_HOST
+MYSQL=$'mysql -u '$DB_USER$' -p'$DB_PASS$' -B '$DB_NAME$' -h '$DB_HOST$' -P '$DB_PORT
 LOG='sugar-graphviz.log'
 echo $MYSQL>$LOG
 
@@ -165,10 +204,9 @@ rm -f $PNG
 
 ## Header
 echo "digraph Relationships {">>$DOT
-echo "node [shape=record,fontname=monospace,fontsize=8,color=gray];">>$DOT
+echo "node [shape=record,fontcolor=\"$FONT_COLOR\",fontname=monospace,fontsize=8,color=gray];">>$DOT
 echo 'ranksep=".3;"'>>$DOT
 echo 'orientarion="portrait"'>>$DOT
-#echo 'graph [fontname=monospace,fontsize=10,labelloc=t,labeljust=l,label="'$MODULE_NAME' relationships\n'$DB_NAME'@'$DB_HOST'"]'>>$DOT
 echo 'rankdir=TB'>>$DOT
 echo $'\n'>>$DOT
 
@@ -192,7 +230,7 @@ echo "## Left Tables">>$DOT
 SQL="select distinct lhs_table as table_name from relationships"
 SQL=$SQL" "$WHERE" order by lhs_table;"
 echo $SQL>>$LOG
-LEFT_TABLES=$(echo $SQL | $MYSQL | grep -v table_name)
+LEFT_TABLES=$(echo $SQL | $MYSQL | grep -v table_name | grep -vE "$EXCLUDE")
 echo $LEFT_TABLES>>$LOG
 TOTAL_LEFT_TABLES=$(echo $LEFT_TABLES | wc -w)
 echo "Left Tables: "$TOTAL_LEFT_TABLES
@@ -214,7 +252,7 @@ do
     echo $TABLE>>$RST_TMP
     SQL="select distinct(lhs_key) as key_name from relationships where lhs_table='$TABLE' order by lhs_key;"
     echo $SQL>>$LOG
-    KEY=$(echo $SQL | $MYSQL | grep -v key_name)
+    KEY=$(echo $SQL | $MYSQL | grep -v key_name | grep -vE "$EXCLUDE")
     KEY=$(echo $KEY | sed s/\ /\|/g)
     KEY=$(echo $KEY | awk -F\| '{print "<"$1">"$1"|<"$2">"$2"|<"$3">"$3"|<"$4">"$4"|<"$5">"$5"|<"$6">"$6"|<"$7">"$7"|<"$8">"$8"|<"$9">"$9"|<"$10">"$10}' | sed s/\|\<\>//g)
     SQL="select colorname from graphviz_tables where tablename='$TABLE';"
@@ -231,7 +269,7 @@ echo "## Right Tables">>$DOT
 SQL="select distinct rhs_table as table_name from relationships "
 SQL=$SQL" "$WHERE" order by rhs_table;"
 echo $SQL>>$LOG
-RIGHT_TABLES=$(echo $SQL | $MYSQL | grep -v table_name)
+RIGHT_TABLES=$(echo $SQL | $MYSQL | grep -v table_name | grep -vE "$EXCLUDE")
 TOTAL_RIGHT_TABLES=$(echo $RIGHT_TABLES | wc -w)
 echo "Right Tables: "$TOTAL_RIGHT_TABLES
 
@@ -240,7 +278,7 @@ do
     echo $TABLE>>$RST_TMP
 
     SQL="select distinct(rhs_key) as key_name from relationships where rhs_table='$TABLE' order by rhs_key;"
-    KEY=$(echo $SQL | $MYSQL | grep -v key_name)
+    KEY=$(echo $SQL | $MYSQL | grep -v key_name | grep -vE "$EXCLUDE" )
     KEY=$(echo $KEY | sed s/\ /\|/g)
     KEY=$(echo $KEY | awk -F\| '{print "<"$1">"$1"|<"$2">"$2"|<"$3">"$3"|<"$4">"$4"|<"$5">"$5"|<"$6">"$6"|<"$7">"$7"|<"$8">"$8"|<"$9">"$9"|<"$10">"$10}' | sed s/\|\<\>//g)
     SQL="select colorname from graphviz_tables where tablename='$TABLE';"
@@ -263,7 +301,7 @@ else
 fi
 SQL=$SQL$AND" order by join_table;"
 echo $SQL>>$LOG
-JOIN_TABLES=$(echo $SQL | $MYSQL | grep -v table_name)
+JOIN_TABLES=$(echo $SQL | $MYSQL | grep -v table_name | grep -vE "$EXCLUDE")
 TOTAL_JOIN_TABLES=$(echo $JOIN_TABLES | wc -w)
 echo "Join Tables: "$TOTAL_JOIN_TABLES
 
@@ -273,7 +311,7 @@ do
 
     SQL="(select distinct(join_key_lhs) as key_name from relationships where join_table='$TABLE') union (select distinct(join_key_rhs) as key_name from relationships where join_table='$TABLE') order by key_name;"
     echo $SQL>>$LOG
-    KEY=$(echo $SQL | $MYSQL | grep -v key_name)
+    KEY=$(echo $SQL | $MYSQL | grep -v key_name | grep -vE "$EXCLUDE")
     KEY=$(echo $KEY | sed s/\ /\|/g)
     KEY=$(echo $KEY | awk -F\| '{print "<"$1">"$1"|<"$2">"$2"|<"$3">"$3"|<"$4">"$4"|<"$5">"$5"|<"$6">"$6"|<"$7">"$7"|<"$8">"$8"|<"$9">"$9"|<"$10">"$10}' | sed s/\|\<\>//g)
     SQL="select colorname from graphviz_tables where tablename='$TABLE';"
@@ -285,7 +323,7 @@ done
 
 ## Custom Tables
 SQL="show tables"
-CUSTOM_TABLES=$(echo $SQL | $MYSQL | grep "_cstm")
+CUSTOM_TABLES=$(echo $SQL | $MYSQL | grep "_cstm" | grep -vE "$EXCLUDE")
 echo 'Custom tables query: '$SQL>>$LOG
 echo 'Custom tables result: '$CUSTOM_TABLES>>$LOG
 
@@ -298,7 +336,7 @@ do
         CUSTOM_LEFT_TABLES=$CUSTOM_LEFT_TABLES" "$CUSTOM"_cstm"
     fi
 done
-#echo 'Custom Left Tables: '$CUSTOM_LEFT_TABLES 
+#echo 'Custom Left Tables: '$CUSTOM_LEFT_TABLES
 #echo 'Custom Left Tables: '$CUSTOM_LEFT_TABLES>>$LOG
 
 ## Custom Right Tables
@@ -310,7 +348,7 @@ do
         CUSTOM_RIGHT_TABLES=$CUSTOM_RIGHT_TABLES" "$CUSTOM"_cstm"
     fi
 done
-#echo 'Custom Right Tables: '$CUSTOM_RIGHT_TABLES 
+#echo 'Custom Right Tables: '$CUSTOM_RIGHT_TABLES
 #echo 'Custom Right Tables: '$CUSTOM_RIGHT_TABLES>>$LOG
 
 UNIQUE_CUSTOM_TABLES=$(echo $CUSTOM_LEFT_TABLES" "$CUSTOM_RIGHT_TABLES | tr " " "\n" | sort -u)
@@ -323,7 +361,7 @@ for TABLE_CSTM in $UNIQUE_CUSTOM_TABLES
 do
     SQL="select colorname from graphviz_tables where tablename='$TABLE';"
     echo $SQL>>$LOG
-    COLOR=$(echo $SQL | $MYSQL | grep -v colorname)
+    COLOR=$(echo $SQL | $MYSQL | grep -v colorname | grep -vE "$EXCLUDE")
     TABLE=$(echo $TABLE_CSTM | sed s/_cstm//g)
     echo $TABLE_CSTM>>$RST_TMP
     echo $TABLE_CSTM" [color=$COLOR,label=\"{$TABLE_CSTM|id_c}\"];">>$DOT
@@ -343,7 +381,7 @@ SQL="select distinct lhs_table,rhs_table from relationships"
 ##SQL="select distinct lhs_table,lhs_key,rhs_table,rhs_key from relationships"
 SQL=$SQL" "$WHERE" order by lhs_table,rhs_table;"
 echo $SQL>>$LOG
-RELATIONSHIPS=$(echo $SQL | $MYSQL | grep -v lhs_table | sed s/\\t/\|/g)
+RELATIONSHIPS=$(echo $SQL | $MYSQL | grep -v lhs_table | grep -vE "$EXCLUDE" | sed s/\\t/\|/g)
 ##echo $RELATIONSHIPS
 TOTAL_SIMPLE_RELATIONSHIPS=$(echo $RELATIONSHIPS | wc -w)
 echo "Simple Relationhips: "$TOTAL_SIMPLE_RELATIONSHIPS
@@ -365,7 +403,7 @@ echo $'\n'>>$DOT
 echo "## Left Join Relationships">>$DOT
 # Left Join Tables Relationships
     SQL="select distinct join_table,lhs_table from relationships where join_table is not null"
-    if [ "$MODULE_NAME" != "all" ]    
+    if [ "$MODULE_NAME" != "all" ]
     then
         AND=" and "$(echo \($WHERE\) | sed s/where//g)
     else
@@ -373,7 +411,7 @@ echo "## Left Join Relationships">>$DOT
     fi
     SQL=$SQL$AND" order by lhs_table;"
     echo $SQL>>$LOG
-    LEFT_JOIN_RELATIONSHIPS=$(echo $SQL | $MYSQL | grep -v lhs_table | sed s/\\t/\|/g)    
+    LEFT_JOIN_RELATIONSHIPS=$(echo $SQL | $MYSQL | grep -v lhs_table | grep -vE "$EXCLUDE" | sed s/\\t/\|/g)
     TOTAL_LEFT_JOIN_RELATIONSHIPS=$(echo $LEFT_JOIN_RELATIONSHIPS | wc -w)
     echo "Left Join Relationhips: "$TOTAL_LEFT_JOIN_RELATIONSHIPS
 
@@ -393,7 +431,7 @@ echo $'\n'>>$DOT
 echo "## Right Join Relationships">>$DOT
 # Right Join Tables Relationships
     SQL="select distinct join_table,rhs_table from relationships where join_table is not null"
-    if [ "$MODULE_NAME" != "all" ]    
+    if [ "$MODULE_NAME" != "all" ]
     then
         AND=" and "$(echo \($WHERE\) | sed s/where//g)
     else
@@ -419,7 +457,7 @@ echo "## Right Join Relationships">>$DOT
 TOTAL_RELATIONSHIPS=$[ $TOTAL_SIMPLE_RELATIONSHIPS + $TOTAL_LEFT_JOIN_RELATIONSHIPS + $TOTAL_RIGHT_JOIN_RELATIONSHIPS ]
 echo "Total Relationships: "$TOTAL_RELATIONSHIPS
 
-echo 'graph [fontname=monospace,fontsize=12,labelloc=b,labeljust=l,label="'$MODULE_NAME' relationships '$DB_NAME'@'$DB_HOST' '$TOTAL_TABLES' tables '$TOTAL_RELATIONSHIPS' relationships"]'>>$DOT
+echo 'graph [bgcolor="'$BG_COLOR'",fontcolor="'$FONT_COLOR'",fontname=monospace,fontsize=12,labelloc=b,labeljust=l,label="'$MODULE_NAME' relationships '$DB_NAME'@'$DB_HOST' '$TOTAL_TABLES' tables '$TOTAL_RELATIONSHIPS' relationships"];'>>$DOT
 ## Footer
 echo "}">>$DOT
 
@@ -467,7 +505,7 @@ do
         SQL="desc $TABLE;"
         #echo $SQL | $MYSQL -t | tr "+" "\ " | tr "\|" "\ " | tr "-" "=" >$TMP_PREFIX$TABLE
         echo $SQL | $MYSQL -t >$TMP_PREFIX$TABLE
-        mysql2rst $TMP_PREFIX$TABLE 
+        mysql2rst $TMP_PREFIX$TABLE
         cat $TMP_PREFIX$TABLE>>$RST
 done
 
@@ -529,7 +567,7 @@ done
     mysql2rst $TMP_PREFIX'relationships-'$MODULE_NAME
     cat $TMP_PREFIX'relationships-'$MODULE_NAME>>$RST
     echo $'\n'>>$RST
-    
+
 
     echo $'\n'>>$RST
     RST_ERD='Entity-Relationship Diagram'
@@ -576,4 +614,3 @@ if [ "$SAVE_DOT" = "false" ]
 then
     rm -f $DOT
 fi
-
