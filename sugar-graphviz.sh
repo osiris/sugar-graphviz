@@ -28,6 +28,7 @@ SAVE_DOT=false
 ROTATE=false
 GRAPHVIZ_TABLES=false
 TMP_PREFIX='/tmp/sugar-graphviz--'
+DB_PORT=3306
 
 function usage()
 {
@@ -75,6 +76,10 @@ while [ ! -z "$1" ];do
             DB_HOST=$2
             shift 2
         ;;
+        -P|--port)
+            DB_PORT=$2
+            shift 2
+        ;;
         -m|--module)
             MODULE_NAME=$2
             shift 2
@@ -113,6 +118,7 @@ while [ ! -z "$1" ];do
             DB_PASS=$(cat $CONFIG | grep db_password  | tr -d \ ,\'\> | awk -F= '{print $2}')
             DB_NAME=$(cat $CONFIG | grep db_name      | tr -d \ ,\'\> | awk -F= '{print $2}')
             DB_HOST=$(cat $CONFIG | grep db_host_name | tr -d \ ,\'\> | awk -F= '{print $2}')
+            DB_PORT=$(cat $CONFIG | grep db_port      | tr -d \ ,\'\> | awk -F= '{print $2}')
             shift 1
         ;;
         -?|--help)
@@ -124,7 +130,7 @@ while [ ! -z "$1" ];do
     esac
 done
 
-MYSQL=$'mysql -u '$DB_USER$' -p'$DB_PASS$' -B '$DB_NAME$' -h '$DB_HOST
+MYSQL=$'mysql -u '$DB_USER$' -p'$DB_PASS$' -B '$DB_NAME$' -h '$DB_HOST$' -P '$DB_PORT
 LOG='sugar-graphviz.log'
 echo $MYSQL>$LOG
 
