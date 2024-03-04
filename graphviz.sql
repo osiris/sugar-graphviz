@@ -1,6 +1,6 @@
 
 DROP TABLE IF EXISTS graphviz_colors;
-create table graphviz_colors (colorname varchar(50) not null default ''); 
+create table graphviz_colors (colorname varchar(50) not null default '');
 
 insert into graphviz_colors (colorname) values ('aquamarine');
 insert into graphviz_colors (colorname) values ('black');
@@ -93,9 +93,8 @@ insert into graphviz_colors (colorname) values ('yellowgreen');
 drop table if exists graphviz_tables;
 create table graphviz_tables (tablename varchar(50) not null default '',colorname varchar(50) not null default 'gray');
 
-insert into graphviz_tables (tablename,colorname) select distinct lhs_table as tablename, (select colorname from graphviz_colors order by rand() limit 1) as colorname from relationships group by lhs_table;
+insert into graphviz_tables (tablename,colorname) select distinct lhs_table as tablename, (select colorname from graphviz_colors order by rand() limit 1) as colorname from relationships where lhs_table is not null group by lhs_table;
 
 insert into graphviz_tables (tablename,colorname) select distinct rhs_table as tablename, (select colorname from graphviz_colors order by rand() limit 1) as colorname from relationships where rhs_table not in (select tablename from graphviz_tables) group by rhs_table;
 
 insert into graphviz_tables (tablename,colorname) select distinct join_table as tablename, (select colorname from graphviz_colors order by rand() limit 1) as colorname from relationships where join_table not in (select tablename from graphviz_tables) group by join_table;
-
