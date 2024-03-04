@@ -336,7 +336,7 @@ do
         CUSTOM_LEFT_TABLES=$CUSTOM_LEFT_TABLES" "$CUSTOM"_cstm"
     fi
 done
-#echo 'Custom Left Tables: '$CUSTOM_LEFT_TABLES 
+#echo 'Custom Left Tables: '$CUSTOM_LEFT_TABLES
 #echo 'Custom Left Tables: '$CUSTOM_LEFT_TABLES>>$LOG
 
 ## Custom Right Tables
@@ -348,7 +348,7 @@ do
         CUSTOM_RIGHT_TABLES=$CUSTOM_RIGHT_TABLES" "$CUSTOM"_cstm"
     fi
 done
-#echo 'Custom Right Tables: '$CUSTOM_RIGHT_TABLES 
+#echo 'Custom Right Tables: '$CUSTOM_RIGHT_TABLES
 #echo 'Custom Right Tables: '$CUSTOM_RIGHT_TABLES>>$LOG
 
 UNIQUE_CUSTOM_TABLES=$(echo $CUSTOM_LEFT_TABLES" "$CUSTOM_RIGHT_TABLES | tr " " "\n" | sort -u)
