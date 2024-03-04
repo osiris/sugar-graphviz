@@ -1,0 +1,83 @@
+## Dependencies
+
+You need to have the `graphviz` package installed and access to a
+_SuiteCRM_ database. To generate the documentation in _PDF_, the
+`rst2dpf` package is required.
+
+In _Debian_ execute:
+
+~~~bash
+
+apt install default-mysql-client graphviz rst2pdf
+
+~~~
+
+## Examples
+
+![SuiteCRM 8.5 Calls Relationships](https://raw.githubusercontent.com/gcoop-libre/sugar-graphviz/master/examples/suitecrm85/suitecrm85-relationships-calls.png)
+
+![SuiteCRM 8.5 Relationships Crop](https://raw.githubusercontent.com/gcoop-libre/sugar-graphviz/master/examples/suitecrm85/suitecrm85-relationships-crop.png)
+
+![SuiteCRM 8.5 Relationships Full](https://raw.githubusercontent.com/gcoop-libre/sugar-graphviz/master/examples/suitecrm85/suitecrm85-relationships.png)
+
+## Usage
+
+First create _file_ `config.php` with base configuration or you can also
+create a _symbolic_ link to the _file_ `_config_.php` of a _SuiteCRM_
+instance and add the `-c` parameter to read the `config.php` and specify
+the name of the module (e.g. `calls`) in the `-m` parameter.
+
+### Draw single module
+
+~~~bash
+
+  sugar-graphviz.sh -c -m calls
+
+	Left Tables: 12
+	Right Tables: 6
+	Join Tables: 4
+	Total Custom Tables: 7
+	Total Tables: 29
+	Simple Relationhips: 16
+	Left Join Relationhips: 4
+	Right Join Relationhips: 4
+	Total Relationships: 24
+	Write suitecrm85-relationships-calls.png
+	suitecrm85-relationships-calls.png PNG 1377x631 1377x631+0+0 8-bit sRGB 106817B 0.000u 0:00.000
+
+~~~
+
+### Draw all modules
+
+~~~bash
+
+  sugar-graphviz.sh -c -m all
+
+	Left Tables: 50
+	Right Tables: 85
+	Join Tables: 56
+	Total Custom Tables: 8
+	Total Tables: 199
+	Simple Relationhips: 329
+	Left Join Relationhips: 60
+	Right Join Relationhips: 116
+	Total Relationships: 505
+	Write suitecrm85-relationships.png
+	suitecrm85-relationships.png PNG 14279x4168 14279x4168+0+0 8-bit sRGB 9.05379MiB 0.000u 0:00.000
+
+~~~
+
+## License
+
+GNU General Public License, GPLv3.
+
+## Author Information
+
+Originally the `sugar-graphviz` _script_ was tested with versions
+`v4.5`, `v5.0`, `v5.1`, `v5.5` and `v6.0` of _SugarCRM_ Community
+Edition, the first public versión was released on `2009-05-05` in
+[SugarForge](https://web.archive.org/web/20090514034324/http://www.sugarforge.org/projects/sugar-graphviz/)
+
+This repository was created in 2010 by
+ [Osiris Alejandro Gomez](https://osiux.com/), worker cooperative of
+ [gcoop Cooperativa de Software Libre](https://www.gcoop.coop/).
