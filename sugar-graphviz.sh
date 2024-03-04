@@ -32,6 +32,10 @@ DB_PORT=3306
 EXCLUDE=EXCLUDE_REGEX
 BG_COLOR=black
 FONT_COLOR=yellow
+BIN="$(basename "$0" .sh)"
+
+# Overwrite default values
+[[ -e ".$BIN" ]] && source ".$BIN"
 
 function usage()
 {
